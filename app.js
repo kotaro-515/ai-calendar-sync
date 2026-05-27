@@ -18,42 +18,71 @@ const addBtn = document.getElementById('add-btn');
 const resetBtn = document.getElementById('reset-btn');
 
 // Initialize Google Identity Services
-window.onload = () => {
-    // 実際にはユーザーが Client ID を入力できるようにするのが親切ですが、
-    // ここでは初期化ロジックを準備しておきます。
+function initializeGis() {
+    console.log('Initializing GIS...');
     try {
-        tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/calendar.events',
-            callback: (response) => {
-                if (response.error !== undefined) {
-                    throw (response);
-                }
-                accessToken = response.access_token;
-                showUploadSection();
-            },
-        });
+        if (typeof google !== 'undefined' && !GOOGLE_CLIENT_ID.includes('YOUR_GOOGLE')) {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: GOOGLE_CLIENT_ID,
+                scope: 'https://www.googleapis.com/auth/calendar.events',
+                callback: (response) => {
+                    console.log('GIS Callback received:', response);
+                    if (response.error !== undefined) {
+                        console.error('GIS Error response:', response);
+                        alert('ログインエラー: ' + response.error);
+                        return;
+                    }
+                    accessToken = response.access_token;
+                    showUploadSection();
+                },
+            });
+            console.log('GIS initialized successfully.');
+        } else {
+            console.log('GIS initialization skipped: google undefined or no client id.');
+        }
     } catch (err) {
-        console.error('GIS Error:', err);
+        console.error('GIS Init Error:', err);
     }
+}
+
+window.onload = () => {
+    console.log('Window loaded.');
+    setTimeout(initializeGis, 1000);
 };
 
 authBtn.addEventListener('click', () => {
+    console.log('Auth button clicked.');
+
     if (GOOGLE_CLIENT_ID.includes('YOUR_GOOGLE')) {
         const id = prompt('Google Cloud Consoleで作成した Client ID を入力してください:');
-        if (!id) return;
+        if (!id) {
+            console.log('Prompt cancelled by user.');
+            return;
+        }
         GOOGLE_CLIENT_ID = id;
-        // 再初期化
-        tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: GOOGLE_CLIENT_ID,
-            scope: 'https://www.googleapis.com/auth/calendar.events',
-            callback: (response) => {
-                accessToken = response.access_token;
-                showUploadSection();
-            },
-        });
+        initializeGis();
     }
-    tokenClient.requestAccessToken({ prompt: 'consent' });
+
+    if (!tokenClient) {
+        console.warn('tokenClient is not initialized.');
+        if (typeof google === 'undefined') {
+            alert('Googleの認証ライブラリをロード中です。数秒待ってから再度お試しください。');
+        } else {
+            initializeGis();
+            if (!tokenClient) {
+                alert('初期化に失敗しました。Client IDを確認してください。');
+                return;
+            }
+        }
+    }
+
+    console.log('Requesting access token...');
+    try {
+        tokenClient.requestAccessToken({ prompt: 'consent' });
+    } catch (err) {
+        console.error('requestAccessToken error:', err);
+        alert('認証の開始に失敗しました。詳細はコンソールを確認してください。');
+    }
 });
 
 function showUploadSection() {
