@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Calendar Sync | 画像から予定を自動追加</title>
+    <meta name="description" content="AIがチラシや画像から予定情報を抽出し、Googleカレンダーにワンクリックで登録します。">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Identity Services -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>AI Calendar Sync</h1>
+            <p class="subtitle">画像をドラッグするだけで、カレンダーが整う。</p>
+        </header>
+
+        <main class="main-card">
+            <!-- 認証セクション -->
+            <div id="auth-section" style="text-align: center; margin-bottom: 2rem;">
+                <p style="margin-bottom: 1rem; color: var(--text-muted);">まずGoogleアカウントでログインしてください</p>
+                <button id="auth-btn" class="btn">Googleでログイン</button>
+            </div>
+
+            <!-- アップロードセクション -->
+            <div id="upload-section" style="display: none;">
+                <div class="upload-zone" id="drop-zone">
+                    <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    </svg>
+                    <div class="upload-text">
+                        <h3>画像をドロップ</h3>
+                        <p>またはクリックしてファイルを選択</p>
+                    </div>
+                    <input type="file" id="file-input" hidden accept="image/*">
+                </div>
+            </div>
+
+            <div class="loader" id="loader"></div>
+
+            <!-- 解析結果セクション -->
+            <div id="result-container">
+                <div class="event-card">
+                    <div class="field-group">
+                        <label for="event-title">タイトル</label>
+                        <input type="text" id="event-title" placeholder="イベント名">
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="field-group">
+                            <label for="event-start">開始日時</label>
+                            <input type="datetime-local" id="event-start">
+                        </div>
+                        <div class="field-group">
+                            <label for="event-end">終了日時</label>
+                            <input type="datetime-local" id="event-end">
+                        </div>
+                    </div>
+                    <div class="field-group">
+                        <label for="event-location">場所</label>
+                        <input type="text" id="event-location" placeholder="場所">
+                    </div>
+                    <div class="field-group">
+                        <label for="event-desc">詳細・説明</label>
+                        <textarea id="event-desc" rows="3" placeholder="詳細"></textarea>
+                    </div>
+                </div>
+                <button id="add-btn" class="btn">Googleカレンダーに追加</button>
+                <button id="reset-btn" class="btn btn-secondary">別の画像を試す</button>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+</body>
+</html>
