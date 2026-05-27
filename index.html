@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +14,7 @@
     <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
+
 <body>
     <div class="container">
         <header>
@@ -21,17 +23,42 @@
         </header>
 
         <main class="main-card">
+            <!-- 設定セクション（APIキー等） -->
+            <details id="settings-details" style="margin-bottom: 2rem; color: var(--text-muted); font-size: 0.9rem;">
+                <summary style="cursor: pointer; margin-bottom: 1rem;">⚙️ API設定（初回のみ必要）</summary>
+                <div
+                    style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; border: 1px solid var(--glass-border);">
+                    <div class="field-group">
+                        <label for="client-id-input">Google Client ID</label>
+                        <input type="text" id="client-id-input" placeholder="xxx.apps.googleusercontent.com">
+                    </div>
+                    <div class="field-group">
+                        <label for="gemini-key-input">Gemini API Key</label>
+                        <input type="password" id="gemini-key-input" placeholder="AI Studioで取得したキー">
+                    </div>
+                    <div class="field-group" style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" id="auto-add-toggle" style="width: auto;">
+                        <label for="auto-add-toggle" style="margin-bottom: 0;">解析完了後に自動でカレンダーに追加する</label>
+                    </div>
+                    <button id="save-settings-btn" class="btn btn-secondary"
+                        style="margin-top: 0.5rem; padding: 0.5rem;">設定を保存</button>
+                </div>
+            </details>
+
             <!-- 認証セクション -->
             <div id="auth-section" style="text-align: center; margin-bottom: 2rem;">
-                <p style="margin-bottom: 1rem; color: var(--text-muted);">まずGoogleアカウントでログインしてください</p>
+                <p style="margin-bottom: 1rem; color: var(--text-muted);">Googleアカウントでログインして開始します</p>
                 <button id="auth-btn" class="btn">Googleでログイン</button>
             </div>
 
             <!-- アップロードセクション -->
             <div id="upload-section" style="display: none;">
                 <div class="upload-zone" id="drop-zone">
-                    <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                    <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12">
+                        </path>
                     </svg>
                     <div class="upload-text">
                         <h3>画像をドロップ</h3>
@@ -78,4 +105,5 @@
     <!-- Scripts -->
     <script src="app.js"></script>
 </body>
+
 </html>

@@ -1,6 +1,7 @@
-// Configuration - 本来は環境変数などで管理すべきですが、デモのために入力可能にします
-let GEMINI_API_KEY = '';
-let GOOGLE_CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com'; // ユーザーが設定する必要があります
+// Configuration
+let GEMINI_API_KEY = localStorage.getItem('GEMINI_API_KEY') || '';
+let GOOGLE_CLIENT_ID = localStorage.getItem('GOOGLE_CLIENT_ID') || '';
+let AUTO_ADD = localStorage.getItem('AUTO_ADD') === 'true';
 
 // Google Auth State
 let tokenClient;
@@ -17,71 +18,91 @@ const authBtn = document.getElementById('auth-btn');
 const addBtn = document.getElementById('add-btn');
 const resetBtn = document.getElementById('reset-btn');
 
+// Settings Elements
+const clientIdInput = document.getElementById('client-id-input');
+const geminiKeyInput = document.getElementById('gemini-key-input');
+const autoAddToggle = document.getElementById('auto-add-toggle');
+const saveSettingsBtn = document.getElementById('save-settings-btn');
+const settingsDetails = document.getElementById('settings-details');
+
+// Initialize Settings UI
+clientIdInput.value = GOOGLE_CLIENT_ID;
+geminiKeyInput.value = GEMINI_API_KEY;
+autoAddToggle.checked = AUTO_ADD;
+
+if (GOOGLE_CLIENT_ID && GEMINI_API_KEY) {
+    settingsDetails.removeAttribute('open');
+} else {
+    settingsDetails.setAttribute('open', '');
+}
+
 // Initialize Google Identity Services
 function initializeGis() {
     console.log('Initializing GIS...');
+    if (typeof google === 'undefined') {
+        console.warn('Google script not yet loaded.');
+        return;
+    }
+    if (!GOOGLE_CLIENT_ID) {
+        console.log('No Client ID found. Skipping GIS initialization.');
+        return;
+    }
+
     try {
-        if (typeof google !== 'undefined' && !GOOGLE_CLIENT_ID.includes('YOUR_GOOGLE')) {
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: GOOGLE_CLIENT_ID,
-                scope: 'https://www.googleapis.com/auth/calendar.events',
-                callback: (response) => {
-                    console.log('GIS Callback received:', response);
-                    if (response.error !== undefined) {
-                        console.error('GIS Error response:', response);
-                        alert('ログインエラー: ' + response.error);
-                        return;
-                    }
-                    accessToken = response.access_token;
-                    showUploadSection();
-                },
-            });
-            console.log('GIS initialized successfully.');
-        } else {
-            console.log('GIS initialization skipped: google undefined or no client id.');
-        }
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: GOOGLE_CLIENT_ID,
+            scope: 'https://www.googleapis.com/auth/calendar.events',
+            callback: (response) => {
+                console.log('GIS Callback:', response);
+                if (response.error !== undefined) {
+                    alert('ログインエラー: ' + response.error);
+                    return;
+                }
+                accessToken = response.access_token;
+                showUploadSection();
+            },
+        });
+        console.log('GIS initialized.');
     } catch (err) {
         console.error('GIS Init Error:', err);
     }
 }
 
 window.onload = () => {
-    console.log('Window loaded.');
     setTimeout(initializeGis, 1000);
 };
 
-authBtn.addEventListener('click', () => {
-    console.log('Auth button clicked.');
+// Settings Save Logic
+saveSettingsBtn.addEventListener('click', () => {
+    GOOGLE_CLIENT_ID = clientIdInput.value.trim();
+    GEMINI_API_KEY = geminiKeyInput.value.trim();
+    AUTO_ADD = autoAddToggle.checked;
 
-    if (GOOGLE_CLIENT_ID.includes('YOUR_GOOGLE')) {
-        const id = prompt('Google Cloud Consoleで作成した Client ID を入力してください:');
-        if (!id) {
-            console.log('Prompt cancelled by user.');
-            return;
-        }
-        GOOGLE_CLIENT_ID = id;
-        initializeGis();
+    localStorage.setItem('GOOGLE_CLIENT_ID', GOOGLE_CLIENT_ID);
+    localStorage.setItem('GEMINI_API_KEY', GEMINI_API_KEY);
+    localStorage.setItem('AUTO_ADD', AUTO_ADD);
+
+    alert('設定を保存しました。');
+    initializeGis();
+});
+
+// Auth Logic
+authBtn.addEventListener('click', () => {
+    if (!GOOGLE_CLIENT_ID) {
+        alert('先に「API設定」でGoogle Client IDを入力して保存してください。');
+        settingsDetails.setAttribute('open', '');
+        return;
     }
 
     if (!tokenClient) {
-        console.warn('tokenClient is not initialized.');
-        if (typeof google === 'undefined') {
-            alert('Googleの認証ライブラリをロード中です。数秒待ってから再度お試しください。');
-        } else {
-            initializeGis();
-            if (!tokenClient) {
-                alert('初期化に失敗しました。Client IDを確認してください。');
-                return;
-            }
-        }
+        initializeGis();
     }
 
-    console.log('Requesting access token...');
-    try {
+    if (tokenClient) {
+        console.log('Requesting access token...');
         tokenClient.requestAccessToken({ prompt: 'consent' });
-    } catch (err) {
-        console.error('requestAccessToken error:', err);
-        alert('認証の開始に失敗しました。詳細はコンソールを確認してください。');
+    } else {
+        alert('Googleの認証ライブラリを読み込み中です。数秒待ってからやり直してください。');
     }
 });
 
@@ -108,7 +129,6 @@ dropZone.addEventListener('drop', (e) => {
 });
 
 dropZone.addEventListener('click', () => fileInput.click());
-
 fileInput.addEventListener('change', (e) => {
     if (e.target.files.length > 0) handleFile(e.target.files[0]);
 });
@@ -120,9 +140,9 @@ async function handleFile(file) {
     }
 
     if (!GEMINI_API_KEY) {
-        const key = prompt('Gemini API Keyを入力してください（Google AI Studioで取得可能）:');
-        if (!key) return;
-        GEMINI_API_KEY = key;
+        alert('API設定でGemini API Keyを入力してください。');
+        settingsDetails.setAttribute('open', '');
+        return;
     }
 
     // UI Feedback
@@ -135,10 +155,16 @@ async function handleFile(file) {
 
         fillResultForm(eventData);
         loader.style.display = 'none';
-        resultContainer.style.display = 'block';
+
+        if (AUTO_ADD) {
+            console.log('Auto-adding event to calendar...');
+            await addToCalendar();
+        } else {
+            resultContainer.style.display = 'block';
+        }
     } catch (err) {
-        console.error('Analysis Error:', err);
-        alert('解析に失敗しました。APIキーまたはネットワークを確認してください。');
+        console.error('Process Error:', err);
+        alert('エラーが発生しました: ' + err.message);
         loader.style.display = 'none';
         uploadSection.style.display = 'block';
     }
@@ -163,7 +189,7 @@ async function analyzeImageWithGemini(base64Image) {
         "location": "場所",
         "description": "詳細説明"
     }
-    日付は現在の年(2026年)として推測してください。もし終了時間が不明なら開始から1時間後をセットしてください。`;
+    日付は2026年として推測してください。終了時間が不明なら開始から1時間後。`;
 
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
         method: 'POST',
@@ -178,9 +204,9 @@ async function analyzeImageWithGemini(base64Image) {
         })
     });
 
+    if (!response.ok) throw new Error('Gemini API call failed');
     const data = await response.json();
     const text = data.candidates[0].content.parts[0].text;
-    // JSON部分のみを抽出
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     return JSON.parse(jsonMatch[0]);
 }
@@ -193,10 +219,10 @@ function fillResultForm(data) {
     document.getElementById('event-desc').value = data.description || '';
 }
 
-// Google Calendar API Integration
-addBtn.addEventListener('click', async () => {
+async function addToCalendar() {
+    const title = document.getElementById('event-title').value;
     const event = {
-        'summary': document.getElementById('event-title').value,
+        'summary': title,
         'location': document.getElementById('event-location').value,
         'description': document.getElementById('event-desc').value,
         'start': {
@@ -209,28 +235,27 @@ addBtn.addEventListener('click', async () => {
         }
     };
 
-    try {
-        const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(event)
-        });
+    const response = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(event)
+    });
 
-        if (response.ok) {
-            alert('カレンダーに追加されました！');
-            resetUI();
-        } else {
-            throw new Error('Calendar API failed');
-        }
-    } catch (err) {
-        console.error('Calendar Error:', err);
-        alert('カレンダーへの追加に失敗しました。アクセスの許可を確認してください。');
+    if (response.ok) {
+        alert(`カレンダーに登録しました: ${title}`);
+        resetUI();
+    } else {
+        const errorData = await response.json();
+        console.error('Calendar API Error:', errorData);
+        alert('カレンダーへの登録に失敗しました。');
+        resultContainer.style.display = 'block';
     }
-});
+}
 
+addBtn.addEventListener('click', addToCalendar);
 resetBtn.addEventListener('click', resetUI);
 
 function resetUI() {
