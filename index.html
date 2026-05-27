@@ -4,105 +4,121 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Calendar Sync | 画像から予定を自動追加</title>
-    <meta name="description" content="AIがチラシや画像から予定情報を抽出し、Googleカレンダーにワンクリックで登録します。">
-    <!-- Google Fonts -->
+    <title>AI Calendar Sync | ワンタップで予定登録</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    <!-- Google Identity Services -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
 <body>
+    <!-- 設定アイコン -->
+    <button id="settings-toggle" class="icon-btn" title="設定">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
+            <path
+                d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z" />
+        </svg>
+    </button>
+
+    <!-- モーダル背景 -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <h2>⚙️ API Settings</h2>
+            <p class="modal-desc">他のユーザーも個別のAPIキーを入力して利用できます。</p>
+            <div class="field-group">
+                <label>Google Client ID</label>
+                <input type="text" id="client-id-input" placeholder="xxx.apps.googleusercontent.com">
+            </div>
+            <div class="field-group">
+                <label>Gemini API Key</label>
+                <input type="password" id="gemini-key-input" placeholder="AI Studio から取得">
+            </div>
+            <div class="field-group checkbox-group">
+                <input type="checkbox" id="auto-add-toggle">
+                <label for="auto-add-toggle">解析後、自動でカレンダーに登録する</label>
+            </div>
+            <button id="save-settings-btn" class="btn">設定を保存</button>
+            <button id="close-modal" class="btn btn-secondary">閉じる</button>
+        </div>
+    </div>
+
     <div class="container">
         <header>
-            <h1>AI Calendar Sync</h1>
-            <p class="subtitle">画像をドラッグするだけで、カレンダーが整う。</p>
+            <div class="logo-area">
+                <div class="logo-glow"></div>
+                <h1>Sync<span class="highlight">Calendar</span></h1>
+            </div>
+            <p class="subtitle">AIが画像から予定を読み取り、瞬時に同期します。</p>
         </header>
 
         <main class="main-card">
-            <!-- 設定セクション（APIキー等） -->
-            <details id="settings-details" style="margin-bottom: 2rem; color: var(--text-muted); font-size: 0.9rem;">
-                <summary style="cursor: pointer; margin-bottom: 1rem;">⚙️ API設定（初回のみ必要）</summary>
-                <div
-                    style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; border: 1px solid var(--glass-border);">
-                    <div class="field-group">
-                        <label for="client-id-input">Google Client ID</label>
-                        <input type="text" id="client-id-input" placeholder="xxx.apps.googleusercontent.com">
-                    </div>
-                    <div class="field-group">
-                        <label for="gemini-key-input">Gemini API Key</label>
-                        <input type="password" id="gemini-key-input" placeholder="AI Studioで取得したキー">
-                    </div>
-                    <div class="field-group" style="display: flex; align-items: center; gap: 0.5rem;">
-                        <input type="checkbox" id="auto-add-toggle" style="width: auto;">
-                        <label for="auto-add-toggle" style="margin-bottom: 0;">解析完了後に自動でカレンダーに追加する</label>
-                    </div>
-                    <button id="save-settings-btn" class="btn btn-secondary"
-                        style="margin-top: 0.5rem; padding: 0.5rem;">設定を保存</button>
+            <div id="auth-section" class="state-section">
+                <div class="hero-image-container">
+                    <img src="assets/hero.png" alt="AI Calendar" class="hero-img">
                 </div>
-            </details>
-
-            <!-- 認証セクション -->
-            <div id="auth-section" style="text-align: center; margin-bottom: 2rem;">
-                <p style="margin-bottom: 1rem; color: var(--text-muted);">Googleアカウントでログインして開始します</p>
-                <button id="auth-btn" class="btn">Googleでログイン</button>
+                <p>カレンダーに直接書き込むため、Google連携が必要です</p>
+                <button id="auth-btn" class="btn btn-primary">
+                    <img src="https://www.google.com/favicon.ico" class="google-icon">
+                    Googleでログイン
+                </button>
             </div>
 
-            <!-- アップロードセクション -->
-            <div id="upload-section" style="display: none;">
+            <div id="upload-section" class="state-section" style="display: none;">
                 <div class="upload-zone" id="drop-zone">
-                    <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                        xmlns="http://www.w3.org/2000/svg">
+                    <div class="pulse-ring"></div>
+                    <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12">
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z">
                         </path>
                     </svg>
-                    <div class="upload-text">
-                        <h3>画像をドロップ</h3>
-                        <p>またはクリックしてファイルを選択</p>
-                    </div>
+                    <h3>予定を抽出する画像をドロップ</h3>
+                    <p>チラシ、スクリーンショット、手書きメモなど</p>
                     <input type="file" id="file-input" hidden accept="image/*">
                 </div>
             </div>
 
-            <div class="loader" id="loader"></div>
+            <div class="loader" id="loader">
+                <div class="spinner"></div>
+                <p>AIが予定を解析中...</p>
+            </div>
 
-            <!-- 解析結果セクション -->
-            <div id="result-container">
+            <div id="result-container" class="state-section" style="display: none;">
                 <div class="event-card">
-                    <div class="field-group">
-                        <label for="event-title">タイトル</label>
-                        <input type="text" id="event-title" placeholder="イベント名">
+                    <div class="field-row">
+                        <div class="field-group full">
+                            <label>タイトル</label>
+                            <input type="text" id="event-title">
+                        </div>
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="field-row split">
                         <div class="field-group">
-                            <label for="event-start">開始日時</label>
+                            <label>開始時間</label>
                             <input type="datetime-local" id="event-start">
                         </div>
                         <div class="field-group">
-                            <label for="event-end">終了日時</label>
+                            <label>終了時間</label>
                             <input type="datetime-local" id="event-end">
                         </div>
                     </div>
                     <div class="field-group">
-                        <label for="event-location">場所</label>
-                        <input type="text" id="event-location" placeholder="場所">
+                        <label>場所</label>
+                        <input type="text" id="event-location">
                     </div>
                     <div class="field-group">
-                        <label for="event-desc">詳細・説明</label>
-                        <textarea id="event-desc" rows="3" placeholder="詳細"></textarea>
+                        <label>詳細</label>
+                        <textarea id="event-desc" rows="3"></textarea>
                     </div>
                 </div>
-                <button id="add-btn" class="btn">Googleカレンダーに追加</button>
-                <button id="reset-btn" class="btn btn-secondary">別の画像を試す</button>
+                <div class="action-buttons">
+                    <button id="add-btn" class="btn btn-primary">カレンダーに追加</button>
+                    <button id="reset-btn" class="btn btn-secondary">キャンセル</button>
+                </div>
             </div>
         </main>
     </div>
 
-    <!-- Scripts -->
     <script src="app.js"></script>
 </body>
 
